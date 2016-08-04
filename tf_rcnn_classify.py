@@ -61,7 +61,7 @@ tf.app.flags.DEFINE_string(
     """imagenet_2012_challenge_label_map_proto.pbtxt.""")
 tf.app.flags.DEFINE_string('image_file', '',
                            """Absolute path to image file.""")
-tf.app.flags.DEFINE_integer('num_top_predictions', 5,
+tf.app.flags.DEFINE_integer('num_top_predictions', 3,
                             """Display this many predictions.""")
 
 # pylint: disable=line-too-long
