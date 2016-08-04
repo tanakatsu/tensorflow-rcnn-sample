@@ -49,14 +49,25 @@
           url: "/rcnn.json",
           dataType: 'json'
         }).done(function( data ) {
-          for (var i = 0; i < data.length; i += 1) {
-            var x = data[i].roi[0];
-            var y = data[i].roi[1];
-            var w = data[i].roi[2];
-            var h = data[i].roi[3];
-            var label = data[i].result[0];
+          var img_width = data.width;
+          var img_height = data.height;
+          var results = data.result;
+
+          var scaling = $("#image").height() / img_height;
+
+          for (var i = 0; i < results.length; i += 1) {
+            var x = results[i].roi[0];
+            var y = results[i].roi[1];
+            var w = results[i].roi[2];
+            var h = results[i].roi[3];
+            var label = results[i].result[0];
             var label_text = label.label;
             var label_score = label.score;
+
+            x *= scaling;
+            y *= scaling;
+            w *= scaling;
+            h *= scaling;
 
             if (label_score > 0.1) {
               drawRect(x, y, w, h);
@@ -71,11 +82,11 @@
   <body>
     <div style="position:relative;">
       <div id="canvas">
-        <img src="/image">
+        <img id="image" src="/image" height="400">
       </div>
     </div>
     <div id="result">
-      Processing...
+      Processing... This takes for a while. Please wait.
     </div>
     <br/>
     <div>

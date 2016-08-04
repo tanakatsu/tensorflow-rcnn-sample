@@ -85,6 +85,7 @@ def rcnn_result():
 
 @app.route('/rcnn.json')
 def rcnn_json():
+    # grey scale image is not supported
     srcfile = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.jpg')
     img = io.imread(srcfile)
     height, width, _shape = img.shape
@@ -109,7 +110,7 @@ def rcnn_json():
         for res in result['result']:
             res['score'] = ('%.2f' % res['score'].item())
 
-    return jsonify(clf_results)
+    return jsonify({'width': width, 'height': height, 'result': clf_results})
 
 
 @app.route('/')
