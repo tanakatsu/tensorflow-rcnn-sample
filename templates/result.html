@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      .roi {
+        position: absolute;
+        background-color: transparent;
+        border: solid 1px yellow;
+        width: 0px;
+        height: 0px;
+        left: 0px;
+        top: 0px;
+      }
+
+      .label {
+        position: absolute;
+        margin-top: -20px;
+        color: #ffffff;
+      }
+    </style>
+
+    <script type=text/javascript src="{{ url_for('static', filename='jquery-3.1.0.min.js') }}"></script>
+    <script type="text/javascript">
+      function drawRect(x, y, w, h) {
+        var dom = $("<div class='roi'>");
+        dom.appendTo($("#canvas"));
+        dom.css('left', x);
+        dom.css('top', y);
+        dom.width(w);
+        dom.height(h);
+      }
+
+      function drawLabel(x, y, text, score) {
+        if (y < 20) {
+          // 画面からはみ出ないようにオフセットつける
+          y += 20;
+        }
+        console.log(y);
+        var dom = $("<span class='label'>");
+        dom.appendTo($("#canvas"));
+        dom.css('left', x);
+        dom.css('top', y);
+        dom.html(text + ': ' + score);
+      }
+
+      $(function() {
+        $.ajax({
+          type: "GET",
+          url: "/rcnn.json",
+          dataType: 'json'
+        }).done(function( data ) {
+          for (var i = 0; i < data.length; i += 1) {
+            var x = data[i].roi[0];
+            var y = data[i].roi[1];
+            var w = data[i].roi[2];
+            var h = data[i].roi[3];
+            var label = data[i].result[0];
+            var label_text = label.label;
+            var label_score = label.score;
+
+            if (label_score > 0.1) {
+              drawRect(x, y, w, h);
+              drawLabel(x, y, label_text, label_score);
+            }
+          }
+          $("#result").hide();
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div style="position:relative;">
+      <div id="canvas">
+        <img src="/image">
+      </div>
+    </div>
+    <div id="result">
+      Processing...
+    </div>
+    <br/>
+    <div>
+      <a href='/'>Back</a>
+    </div>
+  </body>
+</html>
