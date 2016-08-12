@@ -35,7 +35,6 @@
           // 画面からはみ出ないようにオフセットつける
           y += 20;
         }
-        console.log(y);
         var dom = $("<span class='label'>");
         dom.appendTo($("#canvas"));
         dom.css('left', x);
@@ -46,35 +45,53 @@
       $(function() {
         $.ajax({
           type: "GET",
-          url: "/rcnn.json",
+          url: "/rcnn_roi.json",
           dataType: 'json'
         }).done(function( data ) {
           var img_width = data.width;
           var img_height = data.height;
-          var results = data.result;
+          var scale = data.scale;
+          var roi = data.roi;
+          var processed = 0;
 
-          var scaling = $("#image").height() / img_height;
+          for (var i = 0; i < roi.length; i += 1) {
+            $.ajax({
+              type: "POST",
+              url: "/rcnn_classify.json",
+              contentType: "application/json",
+              data: JSON.stringify({roi: roi[i]}),
+              dataType: 'json'
+            }).done(function ( data ) {
+              var disp_scaling = $("#image").height() / img_height;
+              var label = data.result[0];
+              var label_text = label.label;
+              var label_score = label.score;
+              var x = data.roi[0];
+              var y = data.roi[1];
+              var w = data.roi[2];
+              var h = data.roi[3];
 
-          for (var i = 0; i < results.length; i += 1) {
-            var x = results[i].roi[0];
-            var y = results[i].roi[1];
-            var w = results[i].roi[2];
-            var h = results[i].roi[3];
-            var label = results[i].result[0];
-            var label_text = label.label;
-            var label_score = label.score;
+              x = x / scale * disp_scaling;
+              y = y / scale * disp_scaling;
+              w = w / scale * disp_scaling;
+              h = h / scale * disp_scaling;
 
-            x *= scaling;
-            y *= scaling;
-            w *= scaling;
-            h *= scaling;
+              if (label_score > 0.3) {
+                drawRect(x, y, w, h);
+                drawLabel(x, y, label_text, label_score);
+              }
 
-            if (label_score > 0.1) {
-              drawRect(x, y, w, h);
-              drawLabel(x, y, label_text, label_score);
-            }
+              ++processed;
+              if (processed === roi.length) {
+                $("#result").hide();
+              } else {
+                var msg = '(' + (processed + 1) + '/' + roi.length + ')';
+                $("#progress").text(msg);
+              }
+            });
+            var msg = '(1/' + roi.length + ')';
+            $("#progress").text(msg);
           }
-          $("#result").hide();
         });
       });
     </script>
@@ -86,7 +103,7 @@
       </div>
     </div>
     <div id="result">
-      Processing... This takes for a while. Please wait.
+      Processing<span id="progress"></span>... This takes for a while. Please wait.
     </div>
     <br/>
     <div>

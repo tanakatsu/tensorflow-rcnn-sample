@@ -1,6 +1,8 @@
 # encoding: utf-8
 from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory
 import os
+import numpy as np
+import json
 from scipy.misc import imresize
 from skimage import io
 import selectivesearch
@@ -35,7 +37,8 @@ def get_rois(img):
 
 
 ALLOWED_EXTENSIONS = set(['jpg'])
-SHRINK_SIZE = 256
+# SHRINK_SIZE = 256
+SHRINK_SIZE = 128
 N_ROI = 3
 
 if heroku_env():
@@ -60,8 +63,18 @@ def upload():
     if request.method == 'POST':
         f = request.files['file']
         if f and allowed_file(f.filename):
-            filename = 'tmp.jpg'
-            f.save(os.path.join(app.config['UPLOAD_DIRECTORY'], filename))
+            uploaded_file = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.jpg')
+            f.save(uploaded_file)
+
+            # resize image so that we can process faster
+            img = io.imread(uploaded_file)
+            height, width, _colors = img.shape
+            scale = min(float(SHRINK_SIZE) / width, float(SHRINK_SIZE) / height)
+            resized_height = int(height * scale)
+            resized_width = int(width * scale)
+            resized_img = imresize(img, (resized_height, resized_width), interp='nearest')
+            io.imsave(os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.s.jpg'), resized_img)
+
             return redirect(url_for('rcnn_result'))
         if f:
             return '''
@@ -83,34 +96,42 @@ def rcnn_result():
     return render_template('result.html')
 
 
-@app.route('/rcnn.json')
-def rcnn_json():
-    # grey scale image is not supported
-    srcfile = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.jpg')
-    img = io.imread(srcfile)
-    height, width, _shape = img.shape
-
-    # resize image so that we can process faster
-    scale = min(float(SHRINK_SIZE) / width, float(SHRINK_SIZE) / height)
-    resized_height = int(height * scale)
-    resized_width = int(width * scale)
-    resized_img = imresize(img, (resized_width, resized_height), interp='nearest')
-
+@app.route('/rcnn_roi.json')
+def rcnn_roi_json():
     # find rois from resized image
-    candidates = get_rois(resized_img)
+    resized_filename = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.s.jpg')
+    img = io.imread(resized_filename)
+    roi_resized = get_rois(img)
+    print 'roi(resized)=', roi_resized
 
-    # predict in resized image
-    candidates = list(candidates)[0:N_ROI]
-    clf_results = tf_rcnn_classify.classify(srcfile, candidates, savedir=UPLOAD_DIRECTORY)
+    # select N rois
+    roi_resized = list(roi_resized)[0:N_ROI]
 
-    # recalculate roi
+    uploaded_file = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.jpg')
+    img = io.imread(uploaded_file)
+    height, width, _colors = img.shape
+    scale = min(float(SHRINK_SIZE) / width, float(SHRINK_SIZE) / height)
+    return jsonify({'width': width, 'height': height, 'roi': roi_resized, 'scale': scale})
+
+
+@app.route('/rcnn_classify.json', methods=['POST'])
+def rcnn_classify_json():
+    if request.headers['Content-Type'] != 'application/json':
+        print(request.headers['Content-Type'])
+        return jsonify(error='Invalid Content-Type'), 400
+
+    srcfile = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.s.jpg')
+    roi = json.loads(request.data)["roi"]
+
+    # predict in resized image (grey scale image is not supported)
+    clf_results = tf_rcnn_classify.classify(srcfile, roi, savedir=UPLOAD_DIRECTORY)
+    print 'results=', clf_results
+
     for result in clf_results:
-        result['roi'] = [int(x / scale) for x in result['roi']]
-        # convert numpy.foat32 to float
-        for res in result['result']:
-            res['score'] = ('%.2f' % res['score'].item())
+        # convert numpy.float32 to float
+        result['score'] = ('%.2f' % result['score'].item())
 
-    return jsonify({'width': width, 'height': height, 'result': clf_results})
+    return jsonify({'roi': roi, 'result': clf_results})
 
 
 @app.route('/')
@@ -119,5 +140,6 @@ def main():
 
 
 if __name__ == '__main__':
-    app.debug = True
+    if not heroku_env():
+        app.debug = True
     app.run()

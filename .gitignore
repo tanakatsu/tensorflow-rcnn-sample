@@ -56,4 +56,6 @@ docs/_build/
 # PyBuilder
 target/
 
+.DS_store
 tmp.jpg
+tmp.s.jpg

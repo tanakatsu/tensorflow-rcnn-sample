@@ -43,8 +43,7 @@ import tarfile
 import numpy as np
 from six.moves import urllib
 import tensorflow as tf
-#import tf_rcnn_segmentation
-import tf_rcnn_roi
+import skimage.io
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -205,19 +204,30 @@ def maybe_download_and_extract():
     tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
 
-def classify(image_file, rois, savedir='.'):
+def classify(image_file, roi, savedir='.'):
     # maybe_download_and_extract()
-    total_results = []
-    for roi in rois:
-        print(roi)
-        x = roi[0]
-        y = roi[1]
-        w = roi[2]
-        h = roi[3]
-        roi_image = tf_rcnn_roi.save_image(image_file, x, y, x + w, y + h, savedir=savedir)
-        results = run_inference_on_image(roi_image)
-        total_results.append({"roi": roi, "result": results})
-        for result in results:
-            print('%s (score = %.5f)' % (result["label"], result["score"]))
-    tf_rcnn_roi.clear_images(image_file, savedir=savedir)
-    return total_results
+    print(roi)
+    x = roi[0]
+    y = roi[1]
+    w = roi[2]
+    h = roi[3]
+    x2 = x + w
+    y2 = y + h
+    filename = os.path.splitext(os.path.basename(image_file))[0]
+    ext = os.path.splitext(os.path.basename(image_file))[1]
+    output_filename = "{0}.{1},{2}-{3},{4}{5}".format(filename, x, y, x2, y2, ext)
+    if savedir:
+        output_filename = savedir + '/' + output_filename
+    img = skimage.io.imread(image_file)
+    crop_img = img[y:y2, x:x2]
+    skimage.io.imsave(output_filename, crop_img)
+    results = run_inference_on_image(output_filename)
+    for result in results:
+        print('%s (score = %.5f)' % (result["label"], result["score"]))
+    os.remove(output_filename)
+    return results
+
+
+if __name__ == '__main__':
+    results = run_inference_on_image(sys.argv[1])
+    print(results)
