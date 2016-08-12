@@ -11,3 +11,6 @@ RUN pip install scipy
 RUN pip install scikit-image
 RUN pip install selectivesearch
 ADD . /app/user/
+
+CMD ["gunicorn", "main_test:app"]
+
