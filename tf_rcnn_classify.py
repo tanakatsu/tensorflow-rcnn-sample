@@ -219,5 +219,5 @@ def classify(image_file, rois, savedir='.'):
         total_results.append({"roi": roi, "result": results})
         for result in results:
             print('%s (score = %.5f)' % (result["label"], result["score"]))
-    tf_rcnn_roi.clear_images(image_file, savedir='.')
+    tf_rcnn_roi.clear_images(image_file, savedir=savedir)
     return total_results

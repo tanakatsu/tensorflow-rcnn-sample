@@ -101,7 +101,7 @@ def rcnn_json():
 
     # predict in resized image
     candidates = list(candidates)[0:N_ROI]
-    clf_results = tf_rcnn_classify.classify(srcfile, candidates)
+    clf_results = tf_rcnn_classify.classify(srcfile, candidates, savedir=UPLOAD_DIRECTORY)
 
     # recalculate roi
     for result in clf_results:
