@@ -12,6 +12,16 @@
         top: 0px;
       }
 
+      .roi_thin {
+        position: absolute;
+        background-color: transparent;
+        border: dotted 1px #808080;
+        width: 0px;
+        height: 0px;
+        left: 0px;
+        top: 0px;
+      }
+
       .label {
         position: absolute;
         margin-top: -20px;
@@ -21,13 +31,21 @@
 
     <script type=text/javascript src="{{ url_for('static', filename='jquery-3.1.0.min.js') }}"></script>
     <script type="text/javascript">
-      function drawRect(x, y, w, h) {
-        var dom = $("<div class='roi'>");
+      function drawRect(x, y, w, h, klass) {
+        var dom = $("<div class='" + klass + "'>");
         dom.appendTo($("#canvas"));
         dom.css('left', x);
         dom.css('top', y);
         dom.width(w);
         dom.height(h);
+      }
+
+      function drawThickRect(x, y, w, h) {
+        drawRect(x, y, w, h, 'roi');
+      }
+
+      function drawThinRect(x, y, w, h) {
+        drawRect(x, y, w, h, 'roi_thin');
       }
 
       function drawLabel(x, y, text, score) {
@@ -76,9 +94,11 @@
               w = w / scale * disp_scaling;
               h = h / scale * disp_scaling;
 
-              if (label_score > 0.3) {
-                drawRect(x, y, w, h);
+              if (label_score > 0.2) {
+                drawThickRect(x, y, w, h);
                 drawLabel(x, y, label_text, label_score);
+              } else {
+                drawThinRect(x, y, w, h);
               }
 
               ++processed;

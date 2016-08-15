@@ -7,6 +7,7 @@ from scipy.misc import imresize
 from skimage import io
 import selectivesearch
 import tf_rcnn_classify
+import roi
 
 
 def allowed_file(filename):
@@ -27,7 +28,7 @@ def get_rois(img):
     for r in regions:
         if r['rect'] in candidates:
             continue
-        if r['size'] < 2000:
+        if r['size'] < (SHRINK_SIZE * SHRINK_SIZE / 12):
             continue
         x, y, w, h = r['rect']
         if w / h > 1.2 or h / w > 1.2:
@@ -37,9 +38,8 @@ def get_rois(img):
 
 
 ALLOWED_EXTENSIONS = set(['jpg'])
-# SHRINK_SIZE = 256
 SHRINK_SIZE = 128
-N_ROI = 3
+MAX_ROI = 5
 
 if heroku_env():
     UPLOAD_DIRECTORY = '/tmp'
@@ -105,7 +105,9 @@ def rcnn_roi_json():
     print 'roi(resized)=', roi_resized
 
     # select N rois
-    roi_resized = list(roi_resized)[0:N_ROI]
+    roi_resized = roi.select_candidates(list(roi_resized))
+    print 'roi(selected)=', roi_resized
+    roi_resized = roi_resized[0:MAX_ROI]
 
     uploaded_file = os.path.join(app.config['UPLOAD_DIRECTORY'], 'tmp.jpg')
     img = io.imread(uploaded_file)
