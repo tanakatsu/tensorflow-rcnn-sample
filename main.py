@@ -28,7 +28,7 @@ def get_rois(img):
     for r in regions:
         if r['rect'] in candidates:
             continue
-        if r['size'] < (SHRINK_SIZE * SHRINK_SIZE / 12):
+        if r['size'] < (SHRINK_SIZE * SHRINK_SIZE / 50):
             continue
         x, y, w, h = r['rect']
         if w / h > 1.2 or h / w > 1.2:
@@ -39,7 +39,7 @@ def get_rois(img):
 
 ALLOWED_EXTENSIONS = set(['jpg'])
 SHRINK_SIZE = 128
-MAX_ROI = 5
+MAX_ROI = 8
 
 if heroku_env():
     UPLOAD_DIRECTORY = '/tmp'
